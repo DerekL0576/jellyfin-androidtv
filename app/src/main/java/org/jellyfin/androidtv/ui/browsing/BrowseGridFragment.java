@@ -86,7 +86,7 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
 
     private String mainTitle;
     private FragmentActivity mActivity;
-    private BaseRowItem mCurrentItem;
+    private BaseRowItem mCurrentItem, mClickedItem = null;
     private CompositeClickedListener mClickedListener = new CompositeClickedListener();
     private CompositeSelectedListener mSelectedListener = new CompositeSelectedListener();
     private final Handler mHandler = new Handler();
@@ -966,39 +966,41 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
                                   RowPresenter.ViewHolder rowViewHolder, Row row) {
 
             if (!(item instanceof BaseRowItem)) return;
+            mClickedItem = (BaseRowItem) item;
             ItemLauncher.launch((BaseRowItem) item, mAdapter, ((BaseRowItem) item).getIndex(), requireContext());
         }
     }
-
-    private final Runnable mDelayedSetItem = new Runnable() {
-        @Override
-        public void run() {
-            if (!getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)) return;
-
-            backgroundService.getValue().setBackground(mCurrentItem.getBaseItem());
-            setItem(mCurrentItem);
-        }
-    };
 
     private final class ItemViewSelectedListener implements OnItemViewSelectedListener {
         @Override
         public void onItemSelected(Presenter.ViewHolder itemViewHolder, Object item,
                                    RowPresenter.ViewHolder rowViewHolder, Row row) {
-            mHandler.removeCallbacks(mDelayedSetItem);
+            mClickedItem = null;
+            mHandler.postDelayed(() -> {
+                if (mClickedItem != null)
+                    return;
+                backgroundService.getValue().clearBackgrounds();
+            }, 500);
+
             if (!(item instanceof BaseRowItem)) {
                 mCurrentItem = null;
                 binding.title.setText(mainTitle);
-                //fill in default background
-                backgroundService.getValue().clearBackgrounds();
             } else {
                 mCurrentItem = (BaseRowItem) item;
                 binding.title.setText(mCurrentItem.getName(requireContext()));
-                binding.infoRow.removeAllViews();
-                mHandler.postDelayed(mDelayedSetItem, VIEW_SELECT_UPDATE_DELAY);
 
-                if (!determiningPosterSize)
+                BaseRowItem itemFinal = mCurrentItem;
+                mHandler.postDelayed(() -> {
+                    if (mClickedItem != null || mCurrentItem == null || itemFinal != mCurrentItem)
+                        return;
+                    setItem(mCurrentItem);
+                }, 500);
+
+                if (!determiningPosterSize) {
                     mAdapter.loadMoreItemsIfNeeded(mCurrentItem.getIndex());
+                }
             }
+
         }
     }
 }
