@@ -91,6 +91,8 @@ public class ItemListFragment extends Fragment implements View.OnKeyListener {
     private ScrollView mScrollView;
     private ItemRowView mCurrentRow;
 
+    private final Handler mHandler = new Handler();
+
     private ItemRowView mCurrentlyPlayingRow;
 
     private BaseItemDto mBaseItem;
@@ -131,12 +133,12 @@ public class ItemListFragment extends Fragment implements View.OnKeyListener {
         //adjust left frame
         RelativeLayout leftFrame = detailsBinding.leftFrame;
         ViewGroup.LayoutParams params = leftFrame.getLayoutParams();
-        params.width = Utils.convertDpToPixel(requireContext(),100);
+        params.width = Utils.convertDpToPixel(requireContext(), 100);
 
 
         mMetrics = new DisplayMetrics();
         requireActivity().getWindowManager().getDefaultDisplay().getMetrics(mMetrics);
-        mBottomScrollThreshold = (int)(mMetrics.heightPixels *.6);
+        mBottomScrollThreshold = (int) (mMetrics.heightPixels * .6);
 
         //Item list listeners
         mItemList.setRowSelectedListener(new ItemRowView.RowSelectedListener() {
@@ -144,7 +146,7 @@ public class ItemListFragment extends Fragment implements View.OnKeyListener {
             public void onRowSelected(ItemRowView row) {
                 mCurrentRow = row;
                 //Keep selected row in center of screen
-                int[] location = new int[] {0,0};
+                int[] location = new int[]{0, 0};
                 row.getLocationOnScreen(location);
                 int y = location[1];
                 if (y > mBottomScrollThreshold) {
@@ -180,7 +182,8 @@ public class ItemListFragment extends Fragment implements View.OnKeyListener {
             switch (keyCode) {
                 case KeyEvent.KEYCODE_MEDIA_PAUSE:
                 case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE:
-                    if (mediaManager.getValue().isPlayingAudio()) mediaManager.getValue().pauseAudio();
+                    if (mediaManager.getValue().isPlayingAudio())
+                        mediaManager.getValue().pauseAudio();
                     else mediaManager.getValue().resumeAudio();
                     return true;
                 case KeyEvent.KEYCODE_MEDIA_NEXT:
@@ -220,7 +223,8 @@ public class ItemListFragment extends Fragment implements View.OnKeyListener {
                 new Handler().postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        if (!getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)) return;
+                        if (!getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED))
+                            return;
 
                         ItemListViewHelperKt.refresh(mItemList);
                         lastUpdated = Calendar.getInstance();
@@ -260,14 +264,16 @@ public class ItemListFragment extends Fragment implements View.OnKeyListener {
         }
 
         @Override
-        public void onQueueStatusChanged(boolean hasQueue) {}
+        public void onQueueStatusChanged(boolean hasQueue) {
+        }
 
         @Override
-        public void onQueueReplaced() { }
+        public void onQueueReplaced() {
+        }
     };
 
     private void showMenu(final ItemRowView row, boolean showOpen) {
-        PopupMenu menu = new PopupMenu(requireContext(), row != null? row : requireActivity().getCurrentFocus(), Gravity.END);
+        PopupMenu menu = new PopupMenu(requireContext(), row != null ? row : requireActivity().getCurrentFocus(), Gravity.END);
         int order = 0;
         if (showOpen) {
             MenuItem open = menu.getMenu().add(0, 0, order++, R.string.lbl_open);
@@ -292,7 +298,7 @@ public class ItemListFragment extends Fragment implements View.OnKeyListener {
         play.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
-                play(mItems.subList(row.getIndex(), row.getIndex()+1), false);
+                play(mItems.subList(row.getIndex(), row.getIndex() + 1), false);
                 return true;
             }
         });
@@ -302,7 +308,8 @@ public class ItemListFragment extends Fragment implements View.OnKeyListener {
                 @Override
                 public boolean onMenuItemClick(MenuItem item) {
                     PlaybackLauncher playbackLauncher = KoinJavaComponent.<PlaybackLauncher>get(PlaybackLauncher.class);
-                    if (playbackLauncher.interceptPlayRequest(requireContext(), row.getItem())) return true;
+                    if (playbackLauncher.interceptPlayRequest(requireContext(), row.getItem()))
+                        return true;
 
                     mediaManager.getValue().queueAudioItem(row.getItem());
                     return true;
@@ -350,7 +357,7 @@ public class ItemListFragment extends Fragment implements View.OnKeyListener {
     public void setBaseItem(BaseItemDto item) {
         mBaseItem = item;
 
-        LinearLayout mainInfoRow = (LinearLayout)requireActivity().findViewById(R.id.fdMainInfoRow);
+        LinearLayout mainInfoRow = (LinearLayout) requireActivity().findViewById(R.id.fdMainInfoRow);
 
         InfoLayoutHelper.addInfoRow(requireContext(), ModelCompat.asSdk(item), mainInfoRow, false);
         addGenres(mGenreRow);
@@ -398,7 +405,7 @@ public class ItemListFragment extends Fragment implements View.OnKeyListener {
                     ItemFields.ChildCount
             });
             songs.setIncludeItemTypes(new String[]{"Audio"});
-            songs.setSortBy(new String[] {ItemSortBy.SortName});
+            songs.setSortBy(new String[]{ItemSortBy.SortName});
             songs.setLimit(200);
             apiClient.getValue().GetItemsAsync(songs, itemResponse);
         }
@@ -439,7 +446,7 @@ public class ItemListFragment extends Fragment implements View.OnKeyListener {
         }
     };
 
-    private void updatePoster(BaseItemDto item){
+    private void updatePoster(BaseItemDto item) {
         if (FakeBaseItem.INSTANCE.getFAV_SONGS_ID().toString().equals(mItemId)) {
             mPoster.setImageResource(R.drawable.favorites);
         } else {
@@ -462,7 +469,8 @@ public class ItemListFragment extends Fragment implements View.OnKeyListener {
 
     private void play(List<BaseItemDto> items, int ndx, boolean shuffle) {
         PlaybackLauncher playbackLauncher = KoinJavaComponent.<PlaybackLauncher>get(PlaybackLauncher.class);
-        if (playbackLauncher.interceptPlayRequest(requireContext(), items.size() > 0 ? ModelCompat.asSdk(items.get(0)) : null)) return;
+        if (playbackLauncher.interceptPlayRequest(requireContext(), items.size() > 0 ? ModelCompat.asSdk(items.get(0)) : null))
+            return;
 
         Timber.d("play items: %d, ndx: %d, shuffle: %b", items.size(), ndx, shuffle);
 
@@ -562,7 +570,7 @@ public class ItemListFragment extends Fragment implements View.OnKeyListener {
 
         if (!FakeBaseItem.INSTANCE.getFAV_SONGS_ID().toString().equals(mItemId)) {
             //Favorite
-            TextUnderButton fav = TextUnderButton.create(requireContext(), R.drawable.ic_heart, buttonSize,2, getString(R.string.lbl_favorite), new View.OnClickListener() {
+            TextUnderButton fav = TextUnderButton.create(requireContext(), R.drawable.ic_heart, buttonSize, 2, getString(R.string.lbl_favorite), new View.OnClickListener() {
                 @Override
                 public void onClick(final View v) {
                     UserItemDataDto data = mBaseItem.getUserData();
@@ -572,7 +580,7 @@ public class ItemListFragment extends Fragment implements View.OnKeyListener {
                             if (!getActive()) return;
 
                             mBaseItem.setUserData(response);
-                            ((TextUnderButton)v).setActivated(response.getIsFavorite());
+                            ((TextUnderButton) v).setActivated(response.getIsFavorite());
                             dataRefreshService.getValue().setLastFavoriteUpdate(System.currentTimeMillis());
                         }
                     });
@@ -602,10 +610,12 @@ public class ItemListFragment extends Fragment implements View.OnKeyListener {
 
     private void updateBackdrop() {
         BaseItemDto item = mBaseItem;
-
-        if(item.getBackdropCount() == 0 && mItems != null && mItems.size() >= 1)
+        if (item.getBackdropCount() == 0 && mItems != null && mItems.size() >= 1)
             item = mItems.get(new Random().nextInt(mItems.size()));
-
-        backgroundService.getValue().setBackground(ModelCompat.asSdk(item));
+        BaseItemDto itemFinal = item;
+        mHandler.postDelayed(() -> {
+            if (mItems != null && mItems.contains(itemFinal))
+                backgroundService.getValue().setBackground(ModelCompat.asSdk(itemFinal));
+        }, 500);
     }
 }

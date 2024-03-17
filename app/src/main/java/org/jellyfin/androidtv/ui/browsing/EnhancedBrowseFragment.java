@@ -94,8 +94,10 @@ public class EnhancedBrowseFragment extends Fragment implements RowLoader, View.
     protected MutableObjectAdapter<Row> mRowsAdapter;
     protected ArrayList<BrowseRowDef> mRows = new ArrayList<>();
     protected CardPresenter mCardPresenter;
-    protected BaseRowItem mCurrentItem;
+    protected BaseRowItem mCurrentItem, mClickedItem = null;
     protected ListRow mCurrentRow;
+
+    private final Handler mHandler = new Handler();
 
     private Lazy<BackgroundService> backgroundService = inject(BackgroundService.class);
     private Lazy<MarkdownRenderer> markdownRenderer = inject(MarkdownRenderer.class);
@@ -197,7 +199,7 @@ public class EnhancedBrowseFragment extends Fragment implements RowLoader, View.
         if (!justLoaded) {
             // Re-retrieve anything that needs it but delay slightly so we don't take away gui landing
             if (mRowsAdapter != null) {
-                refreshCurrentItem();
+                //  refreshCurrentItem();
                 new Handler().postDelayed(new Runnable() {
                     @Override
                     public void run() {
@@ -361,7 +363,7 @@ public class EnhancedBrowseFragment extends Fragment implements RowLoader, View.
 
                     ItemRowAdapter adapter = (ItemRowAdapter) mCurrentRow.getAdapter();
                     if (response == null) adapter.removeAt(adapter.indexOf(item), 1);
-					else adapter.notifyItemRangeChanged(adapter.indexOf(item), 1);
+                    else adapter.notifyItemRangeChanged(adapter.indexOf(item), 1);
                 }
             });
         }
@@ -440,7 +442,7 @@ public class EnhancedBrowseFragment extends Fragment implements RowLoader, View.
         @Override
         public void onItemClicked(final Presenter.ViewHolder itemViewHolder, Object item, RowPresenter.ViewHolder rowViewHolder, Row row) {
             if (!(item instanceof BaseRowItem)) return;
-
+            mClickedItem = (BaseRowItem) item;
             ItemLauncher.launch((BaseRowItem) item, (ItemRowAdapter) ((ListRow) row).getAdapter(), ((BaseRowItem) item).getIndex(), requireContext());
         }
     }
@@ -458,11 +460,12 @@ public class EnhancedBrowseFragment extends Fragment implements RowLoader, View.
                 mTitle.setText(mFolder != null ? mFolder.getName() : "");
                 mInfoRow.removeAllViews();
                 mSummary.setText("");
-                // Fill in default background
-                backgroundService.getValue().clearBackgrounds();
+                if (mClickedItem == null)
+                    backgroundService.getValue().clearBackgrounds();
+                mClickedItem = mCurrentItem = null;
                 return;
             }
-
+            mClickedItem = null;
             BaseRowItem rowItem = (BaseRowItem) item;
 
             mCurrentItem = rowItem;
@@ -470,18 +473,28 @@ public class EnhancedBrowseFragment extends Fragment implements RowLoader, View.
             mInfoRow.removeAllViews();
 
             mTitle.setText(rowItem.getName(requireContext()));
-
-            String summary = rowItem.getSummary(requireContext());
-            if (summary != null)
-                mSummary.setText(markdownRenderer.getValue().toMarkdownSpanned(summary));
-            else mSummary.setText(null);
-
-            InfoLayoutHelper.addInfoRow(requireContext(), rowItem.getBaseItem(), mInfoRow, true);
+            mSummary.setText(null);
 
             ItemRowAdapter adapter = (ItemRowAdapter) ((ListRow) row).getAdapter();
             adapter.loadMoreItemsIfNeeded(rowItem.getIndex());
 
-            backgroundService.getValue().setBackground(rowItem.getBaseItem());
+            BaseRowItem itemFinal = mCurrentItem;
+            mHandler.postDelayed(() -> {
+                if (mSummary == null || mClickedItem != null || mCurrentItem == null || itemFinal != mCurrentItem)
+                    return;
+                String summary = rowItem.getSummary(requireContext());
+                if (summary != null) {
+                    mSummary.setText(markdownRenderer.getValue().toMarkdownSpanned(summary));
+                } else {
+                    mSummary.setText(null);
+                }
+                InfoLayoutHelper.addInfoRow(requireContext(), rowItem.getBaseItem(), mInfoRow, true);
+                mHandler.postDelayed(() -> {
+                    if (mClickedItem != null || mCurrentItem == null || itemFinal != mCurrentItem)
+                        return;
+                    backgroundService.getValue().setBackground(mCurrentItem.getBaseItem());
+                }, 500);
+            }, 500);
         }
     }
 }
